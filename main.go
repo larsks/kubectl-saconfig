@@ -106,22 +106,26 @@ func main() {
 	must(clientcmdapi.MinifyConfig(config), "failed to minify configuration")
 	must(clientcmdapi.FlattenConfig(config), "failed to flatten configuration")
 
-	ctx := config.CurrentContext
 	if options.Namespace == "" {
-		options.Namespace = config.Contexts[ctx].Namespace
+		options.Namespace = config.Contexts[config.CurrentContext].Namespace
 	}
-
-	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", options.Namespace, options.ServiceAccountName)
 
 	tokenResponse, err := requestToken(config)
 	must(err, "failed to acquire token for serviceaccount %s", options.ServiceAccountName)
+  addServiceAccountToken(config, tokenResponse)
+
+  writeConfig(config)
+}
+
+func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.TokenRequest) {
+	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", options.Namespace, options.ServiceAccountName)
 
 	config.Contexts[qualName] = &clientcmdapi.Context{
-		Cluster:   config.Contexts[ctx].Cluster,
+		Cluster:   config.Contexts[config.CurrentContext].Cluster,
 		AuthInfo:  qualName,
 		Namespace: options.Namespace,
 	}
-	delete(config.Contexts, ctx)
+	delete(config.Contexts, config.CurrentContext)
 	config.CurrentContext = qualName
 
 	config.AuthInfos = map[string]*clientcmdapi.AuthInfo{
@@ -130,12 +134,17 @@ func main() {
 		},
 	}
 
+}
+
+func writeConfig(config *clientcmdapi.Config) {
+	var out io.Writer
+  var err error
+
 	content, err := clientcmd.Write(*config)
 	must(err, "failed to marshal configuration")
 
-	var out io.Writer
 	if options.OutputFile != "" {
-		out, err = os.Create(options.OutputFile)
+    out, err = os.Create(options.OutputFile)
 		must(err, "failed to open %s for writing", options.OutputFile)
 	} else {
 		out = os.Stdout
