@@ -18,10 +18,3 @@ repos:
       files: \.(yaml|yml)$
       types: [file, yaml]
       entry: yamllint --strict
-
-- repo: local
-  hooks:
-  - id: golangci-lint
-    name: golangci-lint
-    entry: ./scripts/golangci-lint.sh
-    language: script
