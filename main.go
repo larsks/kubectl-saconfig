@@ -46,6 +46,8 @@ func init() {
 	flag.StringVarP(&options.OutputFile, "output", "o", "", "write configuration to named file")
 	flag.BoolVarP(&options.Help, "help", "h", false, "")
 	flag.BoolVarP(&options.Version, "version", "v", false, "")
+
+	flag.Usage = usage
 }
 
 func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
@@ -70,6 +72,12 @@ func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
 
 	return clientset.CoreV1().ServiceAccounts(options.Namespace).CreateToken(
 		context.TODO(), options.ServiceAccountName, tokenRequest, metav1.CreateOptions{})
+}
+
+func usage() {
+	prg := os.Args[0]
+	fmt.Fprintf(flag.CommandLine.Output(), "%s: usage: %s [options] serviceAccountName\n\nOptions:\n\n", prg, prg)
+	flag.CommandLine.PrintDefaults()
 }
 
 func parseArgs() {
@@ -110,9 +118,9 @@ func main() {
 
 	tokenResponse, err := requestToken(config)
 	must(err, "failed to acquire token for serviceaccount %s", options.ServiceAccountName)
-  addServiceAccountToken(config, tokenResponse)
+	addServiceAccountToken(config, tokenResponse)
 
-  writeConfig(config)
+	writeConfig(config)
 }
 
 func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.TokenRequest) {
@@ -131,18 +139,17 @@ func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.T
 			Token: tokenResponse.Status.Token,
 		},
 	}
-
 }
 
 func writeConfig(config *clientcmdapi.Config) {
 	var out io.Writer
-  var err error
+	var err error
 
 	content, err := clientcmd.Write(*config)
 	must(err, "failed to marshal configuration")
 
 	if options.OutputFile != "" {
-    out, err = os.Create(options.OutputFile)
+		out, err = os.Create(options.OutputFile)
 		must(err, "failed to open %s for writing", options.OutputFile)
 	} else {
 		out = os.Stdout
