@@ -1,0 +1,19 @@
+linters:
+  enable:
+  - errcheck
+  - gosimple
+  - govet
+  - ineffassign
+  - revive
+  - staticcheck
+  - unused
+  - gocritic
+  - importas
+  - misspell
+  - revive
+
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true

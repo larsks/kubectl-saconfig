@@ -1,0 +1,28 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.3.0
+  hooks:
+    - id: trailing-whitespace
+    - id: check-merge-conflict
+    - id: end-of-file-fixer
+    - id: check-added-large-files
+    - id: check-case-conflict
+    - id: check-json
+    - id: check-symlinks
+    - id: detect-private-key
+
+- repo: https://github.com/adrienverge/yamllint.git
+  rev: v1.25.0
+  hooks:
+    - id: yamllint
+      files: \.(yaml|yml)$
+      types: [file, yaml]
+      entry: yamllint --strict
+
+- repo: local
+  hooks:
+  - id: golangci-lint
+    name: Run linters on go source
+    files: \.go
+    language: script
+    entry: ./scripts/golangci-lint.sh
