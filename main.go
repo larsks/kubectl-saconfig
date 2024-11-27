@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
+	"kubectl-saconfig/version"
 	"log"
 	"os"
 
@@ -14,8 +16,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"kubectl-saconfig/version"
 )
 
 type (
@@ -24,6 +24,7 @@ type (
 		Namespace          string
 		ServiceAccountName string
 		Impersonate        string
+		OutputFile         string
 		Help               bool
 		Version            bool
 	}
@@ -42,6 +43,7 @@ func init() {
 	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "path to the kubeconfig file")
 	flag.StringVarP(&options.Namespace, "namespace", "n", "", "namespace containing serviceaccount")
 	flag.StringVar(&options.Impersonate, "as", "", "impersonate a user or serviceaccount")
+	flag.StringVarP(&options.OutputFile, "output", "o", "", "write configuration to named file")
 	flag.BoolVarP(&options.Help, "help", "h", false, "")
 	flag.BoolVarP(&options.Version, "version", "v", false, "")
 }
@@ -130,5 +132,14 @@ func main() {
 
 	content, err := clientcmd.Write(*config)
 	must(err, "failed to marshal configuration")
-	os.Stdout.Write(content)
+
+	var out io.Writer
+	if options.OutputFile != "" {
+		out, err = os.Create(options.OutputFile)
+		must(err, "failed to open %s for writing", options.OutputFile)
+	} else {
+		out = os.Stdout
+	}
+	_, err = out.Write(content)
+	must(err, "failed to write configuration file")
 }
