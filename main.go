@@ -14,6 +14,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"kubectl-saconfig/version"
 )
 
 type (
@@ -23,6 +25,7 @@ type (
 		ServiceAccountName string
 		Impersonate        string
 		Help               bool
+		Version            bool
 	}
 )
 
@@ -38,8 +41,9 @@ func must(err error, msg string, v ...any) {
 func init() {
 	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "path to the kubeconfig file")
 	flag.StringVarP(&options.Namespace, "namespace", "n", "", "namespace containing serviceaccount")
-	flag.BoolVarP(&options.Help, "help", "h", false, "")
 	flag.StringVar(&options.Impersonate, "as", "", "impersonate a user or serviceaccount")
+	flag.BoolVarP(&options.Help, "help", "h", false, "")
+	flag.BoolVarP(&options.Version, "version", "v", false, "")
 }
 
 func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
@@ -75,7 +79,12 @@ func parseArgs() {
 		/* --help output should always go to stdout. I will die on this hill. */
 		flag.CommandLine.SetOutput(os.Stdout)
 		flag.Usage()
-		return
+		os.Exit(0)
+	}
+
+	if options.Version {
+		version.ShowVersion()
+		os.Exit(0)
 	}
 
 	if flag.NArg() != 1 {
