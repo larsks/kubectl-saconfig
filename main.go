@@ -96,7 +96,9 @@ func parseArgs() {
 	}
 
 	if flag.NArg() != 1 {
-		log.Fatalf("missing serviceaccount name\n")
+		log.Printf("missing serviceaccount name\n")
+    flag.Usage()
+    os.Exit(2)
 	}
 
 	options.ServiceAccountName = flag.Arg(0)
