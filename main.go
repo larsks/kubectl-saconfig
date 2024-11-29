@@ -1,3 +1,4 @@
+// kubectl-saconfig generates a kubeconfig file for authenticating as service account.
 package main
 
 import (
@@ -19,19 +20,21 @@ import (
 )
 
 type (
+  // Holds values of command line options.
 	Options struct {
-		Kubeconfig         string
-		Namespace          string
-		ServiceAccountName string
-		Impersonate        string
-		OutputFile         string
-		Help               bool
-		Version            bool
+		Kubeconfig         string   // Path to kubeconfig file (optional)
+		Namespace          string   // Target namespace (defaults to namespace of current context)
+		ServiceAccountName string   // Target service account name
+		Impersonate        string   // Name of user to impersonate (optional)
+		OutputFile         string   // Output kubeconfig to this file when specified (default to stdout)
+		Help               bool     // --help was requested
+		Version            bool     // --verbose was requested
 	}
 )
 
 var options Options
 
+// If err is not nil, log a failure message and exit.
 func must(err error, msg string, v ...any) {
 	if err != nil {
 		newmsg := fmt.Sprintf(msg, v...)
@@ -39,6 +42,7 @@ func must(err error, msg string, v ...any) {
 	}
 }
 
+// Set up command line options processing
 func init() {
 	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "path to the kubeconfig file")
 	flag.StringVarP(&options.Namespace, "namespace", "n", "", "namespace containing serviceaccount")
@@ -50,6 +54,7 @@ func init() {
 	flag.Usage = usage
 }
 
+// Request a token for the target service account
 func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{})
 	restConfig, err := clientConfig.ClientConfig()
@@ -74,17 +79,20 @@ func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
 		context.TODO(), options.ServiceAccountName, tokenRequest, metav1.CreateOptions{})
 }
 
+// Print a usage message. Outputs to flag.CommandLine.Output(), which requires
+// pflag 1.0.6 or any commit later than 81378bbcd8a.
 func usage() {
 	prg := os.Args[0]
 	fmt.Fprintf(flag.CommandLine.Output(), "%s: usage: %s [options] serviceAccountName\n\nOptions:\n\n", prg, prg)
 	flag.CommandLine.PrintDefaults()
 }
 
+// Parse command line arguments.
 func parseArgs() {
 	flag.Parse()
 
 	if options.Help {
-		/* --help output should always go to stdout. I will die on this hill. */
+		// --help output should always go to stdout. I will die on this hill.
 		flag.CommandLine.SetOutput(os.Stdout)
 		flag.Usage()
 		os.Exit(0)
@@ -97,8 +105,8 @@ func parseArgs() {
 
 	if flag.NArg() != 1 {
 		log.Printf("missing serviceaccount name\n")
-    flag.Usage()
-    os.Exit(2)
+		flag.Usage()
+		os.Exit(2)
 	}
 
 	options.ServiceAccountName = flag.Arg(0)
@@ -111,9 +119,14 @@ func main() {
 	config, err := pathopts.GetStartingConfig()
 	must(err, "failed to get kubernetes configuration")
 
+  // Minify and flatten the configuration: this gets us a config that
+  // contains only the current context, and any external resources
+  // have been embedded.
 	must(clientcmdapi.MinifyConfig(config), "failed to minify configuration")
 	must(clientcmdapi.FlattenConfig(config), "failed to flatten configuration")
 
+  // Default to namespace of current context if not provided
+  // explicitly on command line.
 	if options.Namespace == "" {
 		options.Namespace = config.Contexts[config.CurrentContext].Namespace
 	}
@@ -125,6 +138,9 @@ func main() {
 	writeConfig(config)
 }
 
+// Add the service account token to the configuration. This adds a user users section,
+// adds a new context, deletes the previous current context, and updates the current context
+// to point at the one we just added.
 func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.TokenRequest) {
 	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", options.Namespace, options.ServiceAccountName)
 
@@ -143,6 +159,8 @@ func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.T
 	}
 }
 
+// Write configuration to stdout (default) or to the file specified
+// in the --output option.
 func writeConfig(config *clientcmdapi.Config) {
 	var out io.Writer
 	var err error
