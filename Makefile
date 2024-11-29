@@ -9,6 +9,7 @@ COMMIT = $(shell git rev-parse --short=10 HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%S")
 
 GOLDFLAGS = \
+	    -w -s \
 	    -X '$(PKG)/version.BuildVersion=$(VERSION)' \
 	    -X '$(PKG)/version.BuildRef=$(COMMIT)' \
 	    -X '$(PKG)/version.BuildDate=$(DATE)'
