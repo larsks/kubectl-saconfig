@@ -18,20 +18,21 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
-  // per https://krew.sigs.k8s.io/docs/developer-guide/develop/best-practices/
-  _ "k8s.io/client-go/plugin/pkg/client/auth"
+	// per https://krew.sigs.k8s.io/docs/developer-guide/develop/best-practices/
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 type (
-  // Holds values of command line options.
+	// Holds values of command line options.
 	Options struct {
-		Kubeconfig         string   // Path to kubeconfig file (optional)
-		Namespace          string   // Target namespace (defaults to namespace of current context)
-		ServiceAccountName string   // Target service account name
-		Impersonate        string   // Name of user to impersonate (optional)
-		OutputFile         string   // Output kubeconfig to this file when specified (default to stdout)
-		Help               bool     // --help was requested
-		Version            bool     // --verbose was requested
+		Kubeconfig         string // Path to kubeconfig file (optional)
+		Context            string // Kubeconfig context to use
+		Namespace          string // Target namespace (defaults to namespace of current context)
+		ServiceAccountName string // Target service account name
+		Impersonate        string // Name of user to impersonate (optional)
+		OutputFile         string // Output kubeconfig to this file when specified (default to stdout)
+		Help               bool   // --help was requested
+		Version            bool   // --verbose was requested
 	}
 )
 
@@ -48,6 +49,7 @@ func must(err error, msg string, v ...any) {
 // Set up command line options processing
 func init() {
 	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "path to the kubeconfig file")
+	flag.StringVarP(&options.Context, "context", "", "", "The name of the kubeconfig context to use")
 	flag.StringVarP(&options.Namespace, "namespace", "n", "", "namespace containing serviceaccount")
 	flag.StringVar(&options.Impersonate, "as", "", "impersonate a user or serviceaccount")
 	flag.StringVarP(&options.OutputFile, "output", "o", "", "write configuration to named file")
@@ -122,14 +124,18 @@ func main() {
 	config, err := pathopts.GetStartingConfig()
 	must(err, "failed to get kubernetes configuration")
 
-  // Minify and flatten the configuration: this gets us a config that
-  // contains only the current context, and any external resources
-  // have been embedded.
+	if options.Context != "" {
+		config.CurrentContext = options.Context
+	}
+
+	// Minify and flatten the configuration: this gets us a config that
+	// contains only the current context, and any external resources
+	// have been embedded.
 	must(clientcmdapi.MinifyConfig(config), "failed to minify configuration")
 	must(clientcmdapi.FlattenConfig(config), "failed to flatten configuration")
 
-  // Default to namespace of current context if not provided
-  // explicitly on command line.
+	// Default to namespace of current context if not provided
+	// explicitly on command line.
 	if options.Namespace == "" {
 		options.Namespace = config.Contexts[config.CurrentContext].Namespace
 	}
