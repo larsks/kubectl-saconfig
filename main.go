@@ -48,11 +48,11 @@ func must(err error, msg string, v ...any) {
 
 // Set up command line options processing
 func init() {
-	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "path to the kubeconfig file")
+	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file")
 	flag.StringVarP(&options.Context, "context", "", "", "The name of the kubeconfig context to use")
-	flag.StringVarP(&options.Namespace, "namespace", "n", "", "namespace containing serviceaccount")
-	flag.StringVar(&options.Impersonate, "as", "", "impersonate a user or serviceaccount")
-	flag.StringVarP(&options.OutputFile, "output", "o", "", "write configuration to named file")
+	flag.StringVarP(&options.Namespace, "namespace", "n", "", "The namespace scope for this CLI request")
+	flag.StringVar(&options.Impersonate, "as", "", "Username to impersonate for the operation")
+	flag.StringVarP(&options.OutputFile, "output", "o", "", "File to which to write configuration")
 	flag.BoolVarP(&options.Help, "help", "h", false, "")
 	flag.BoolVarP(&options.Version, "version", "v", false, "")
 
