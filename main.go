@@ -17,6 +17,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+  // per https://krew.sigs.k8s.io/docs/developer-guide/develop/best-practices/
+  _ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 type (
