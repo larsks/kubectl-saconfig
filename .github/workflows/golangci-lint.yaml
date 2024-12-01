@@ -1,24 +1,29 @@
 name: golangci-lint
 on:
   push:
+    branches:
+      - "*"
     paths:
     - '**/*.go'
   pull_request:
     paths:
     - '**/*.go'
+  workflow_call:
 
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
+#   cancel-in-progress: true
 
 jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          echo CONCURRENCY: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:

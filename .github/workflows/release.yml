@@ -4,14 +4,24 @@ on:
   push:
     tags:
       - 'v[0-9]*'
+      - testbuild
 
 permissions:
   contents: write
 
 jobs:
+  precommit:
+    uses: ./.github/workflows/precommit.yaml
+
+  golangci-lint:
+    uses: ./.github/workflows/golangci-lint.yaml
+
   build:
     name: Build binary
     runs-on: ubuntu-latest
+    needs:
+    - precommit
+    - golangci-lint
 
     strategy:
       matrix:
@@ -31,23 +41,26 @@ jobs:
             goarch: arm
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '^1.23'
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref_name }}
 
-      - name: Build binaries
-        run: make
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm }}
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '^1.23'
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: "kubectl-saconfig-${{ matrix.goos }}-${{ matrix.goarch }}"
-          path: "build/kubectl-saconfig-${{ matrix.goos }}-${{ matrix.goarch }}"
+    - name: Build binaries
+      run: make
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        GOARM: ${{ matrix.goarm }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: "kubectl-saconfig-${{ matrix.goos }}-${{ matrix.goarch }}"
+        path: "build/kubectl-saconfig-${{ matrix.goos }}-${{ matrix.goarch }}"
 
   release:
     name: Build release
@@ -78,8 +91,8 @@ jobs:
 
     - name: Create archives
       run: |
-          cp README.md binaries/
-          for path in binaries/kubectl-saconfig*; do
+          for path in binaries/*; do
+            # NB: action/upload-artifact does not preserve permissions
             name=${path##*/}
             chmod 755 "$path"
             tar -C binaries -cz -f "$name.tar.gz" \
@@ -88,6 +101,7 @@ jobs:
           done
 
     - uses: ncipollo/release-action@v1
+      if: ${{ ! startsWith(github.ref_name, 'testbuild') }}
       with:
         artifacts: "*.tar.gz"
         bodyFile: "body.md"
