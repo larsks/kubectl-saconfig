@@ -75,9 +75,7 @@ func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
 	must(err, "failed to create kubernetes client")
 
 	tokenRequest := &authv1.TokenRequest{
-		Spec: authv1.TokenRequestSpec{
-			Audiences: []string{"https://kubernetes.default.svc"},
-		},
+		Spec: authv1.TokenRequestSpec{},
 	}
 
 	return clientset.CoreV1().ServiceAccounts(options.Namespace).CreateToken(
