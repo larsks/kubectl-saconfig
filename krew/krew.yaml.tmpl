@@ -1,0 +1,31 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: saconfig
+spec:
+  homepage: https://github.com/larsks/kubectl-saconfig
+  shortDescription: Generate a kubeconfig file for authenticating as a service account
+  version: v0.1.0
+  description: |
+    Request a token using the [TokenRequest] API and generate a kubeconfig file
+    for authenticating as a service account. Outputs the generated
+    configuration to stdout (default) or to a file of your choice (--output).
+    Supports impersonation if you need elevated privileges to complete the
+    token request (kubectl saconfig --as system:admin ...).
+
+    [tokenrequest]: https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/
+  platforms:
+{{ range .assets }}
+    - selector:
+        matchLabels:
+          os: {{ .Os }}
+          arch: {{ .Arch }}
+      uri: {{ .Url }}
+      sha256: "{{ .Sha256 }}"
+      bin: "./kubectl-saconfig"
+      files:
+        - from: kubectl-saconfig
+          to: .
+        - from: LICENSE
+          to: .
+{{ end }}

@@ -24,3 +24,9 @@ build:
 
 clean:
 	rm -rf build
+
+realclean: clean
+	rm -f krew/krew.yaml
+
+krew/krew.yaml:
+	krew-release "$(VERSION)" krew/krew.yaml.tmpl -o $@
