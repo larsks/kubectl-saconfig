@@ -13,8 +13,8 @@ import (
 
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
@@ -25,18 +25,17 @@ import (
 type (
 	// Holds values of command line options.
 	Options struct {
-		Kubeconfig         string // Path to kubeconfig file (optional)
-		Context            string // Kubeconfig context to use
-		Namespace          string // Target namespace (defaults to namespace of current context)
 		ServiceAccountName string // Target service account name
-		Impersonate        string // Name of user to impersonate (optional)
 		OutputFile         string // Output kubeconfig to this file when specified (default to stdout)
 		Help               bool   // --help was requested
 		Version            bool   // --verbose was requested
 	}
 )
 
-var options Options
+var (
+	common_options *genericclioptions.ConfigFlags
+	options        Options
+)
 
 // If err is not nil, log a failure message and exit.
 func must(err error, msg string, v ...any) {
@@ -48,10 +47,9 @@ func must(err error, msg string, v ...any) {
 
 // Set up command line options processing
 func init() {
-	flag.StringVarP(&options.Kubeconfig, "kubeconfig", "k", "", "Path to the kubeconfig file")
-	flag.StringVarP(&options.Context, "context", "", "", "The name of the kubeconfig context to use")
-	flag.StringVarP(&options.Namespace, "namespace", "n", "", "The namespace scope for this CLI request")
-	flag.StringVar(&options.Impersonate, "as", "", "Username to impersonate for the operation")
+	common_options = genericclioptions.NewConfigFlags(false)
+	common_options.AddFlags(flag.CommandLine)
+
 	flag.StringVarP(&options.OutputFile, "output", "o", "", "File to which to write configuration")
 	flag.BoolVarP(&options.Help, "help", "h", false, "")
 	flag.BoolVarP(&options.Version, "version", "v", false, "")
@@ -60,16 +58,9 @@ func init() {
 }
 
 // Request a token for the target service account
-func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{})
-	restConfig, err := clientConfig.ClientConfig()
+func requestToken(loader clientcmd.ClientConfig) (*authv1.TokenRequest, error) {
+	restConfig, err := loader.ClientConfig()
 	must(err, "failed to extract client configuration")
-
-	if options.Impersonate != "" {
-		restConfig.Impersonate = rest.ImpersonationConfig{
-			UserName: options.Impersonate,
-		}
-	}
 
 	clientset, err := kubernetes.NewForConfig(restConfig)
 	must(err, "failed to create kubernetes client")
@@ -78,7 +69,7 @@ func requestToken(config *clientcmdapi.Config) (*authv1.TokenRequest, error) {
 		Spec: authv1.TokenRequestSpec{},
 	}
 
-	return clientset.CoreV1().ServiceAccounts(options.Namespace).CreateToken(
+	return clientset.CoreV1().ServiceAccounts(*common_options.Namespace).CreateToken(
 		context.TODO(), options.ServiceAccountName, tokenRequest, metav1.CreateOptions{})
 }
 
@@ -118,43 +109,43 @@ func parseArgs() {
 func main() {
 	parseArgs()
 
-	pathopts := clientcmd.NewDefaultPathOptions()
-	config, err := pathopts.GetStartingConfig()
+	loader := common_options.ToRawKubeConfigLoader()
+	config, err := loader.RawConfig()
 	must(err, "failed to get kubernetes configuration")
 
-	if options.Context != "" {
-		config.CurrentContext = options.Context
+	if *common_options.Context != "" {
+		config.CurrentContext = *common_options.Context
 	}
 
 	// Minify and flatten the configuration: this gets us a config that
 	// contains only the current context, and any external resources
 	// have been embedded.
-	must(clientcmdapi.MinifyConfig(config), "failed to minify configuration")
-	must(clientcmdapi.FlattenConfig(config), "failed to flatten configuration")
+	must(clientcmdapi.MinifyConfig(&config), "failed to minify configuration")
+	must(clientcmdapi.FlattenConfig(&config), "failed to flatten configuration")
 
 	// Default to namespace of current context if not provided
 	// explicitly on command line.
-	if options.Namespace == "" {
-		options.Namespace = config.Contexts[config.CurrentContext].Namespace
+	if *common_options.Namespace == "" {
+		common_options.Namespace = &config.Contexts[config.CurrentContext].Namespace
 	}
 
-	tokenResponse, err := requestToken(config)
+	tokenResponse, err := requestToken(loader)
 	must(err, "failed to acquire token for serviceaccount %s", options.ServiceAccountName)
-	addServiceAccountToken(config, tokenResponse)
+	addServiceAccountToken(&config, tokenResponse)
 
-	writeConfig(config)
+	writeConfig(&config)
 }
 
 // Add the service account token to the configuration. This adds a user users section,
 // adds a new context, deletes the previous current context, and updates the current context
 // to point at the one we just added.
 func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.TokenRequest) {
-	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", options.Namespace, options.ServiceAccountName)
+	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", *common_options.Namespace, options.ServiceAccountName)
 
 	config.Contexts[qualName] = &clientcmdapi.Context{
 		Cluster:   config.Contexts[config.CurrentContext].Cluster,
 		AuthInfo:  qualName,
-		Namespace: options.Namespace,
+		Namespace: *common_options.Namespace,
 	}
 	delete(config.Contexts, config.CurrentContext)
 	config.CurrentContext = qualName
