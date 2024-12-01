@@ -160,7 +160,7 @@ func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.T
 // Write configuration to stdout (default) or to the file specified
 // in the --output option.
 func writeConfig(config *clientcmdapi.Config) {
-	var out io.Writer
+	var out io.WriteCloser
 	var err error
 
 	content, err := clientcmd.Write(*config)
@@ -169,6 +169,7 @@ func writeConfig(config *clientcmdapi.Config) {
 	if options.OutputFile != "" {
 		out, err = os.Create(options.OutputFile)
 		must(err, "failed to open %s for writing", options.OutputFile)
+		defer out.Close()
 	} else {
 		out = os.Stdout
 	}
