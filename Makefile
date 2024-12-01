@@ -1,8 +1,8 @@
 PKG=kubectl-saconfig
 EXE=kubectl-saconfig-$(shell go env GOOS)-$(shell go env GOARCH)
 
-GOSRC =  main.go \
-	 $(wildcard version/*.go)
+GOSRC =  cmd/saconfig/main.go \
+	 version/version.go
 
 VERSION = $(shell git describe --tags --exact-match 2> /dev/null || echo unknown)
 COMMIT = $(shell git rev-parse --short=10 HEAD)
@@ -17,7 +17,7 @@ GOLDFLAGS = \
 all: build/$(EXE)
 
 build/$(EXE): build $(GOSRC)
-	go build -o $@ -ldflags "$(GOLDFLAGS)"
+	go build -o $@ -ldflags "$(GOLDFLAGS)" ./cmd/saconfig/
 
 build:
 	mkdir build
