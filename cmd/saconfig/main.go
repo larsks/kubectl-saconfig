@@ -25,6 +25,7 @@ import (
 type (
 	// Holds values of command line options.
 	Options struct {
+    genericclioptions.ConfigFlags
 		ServiceAccountName string // Target service account name
 		OutputFile         string // Output kubeconfig to this file when specified (default to stdout)
 		Help               bool   // --help was requested
@@ -33,7 +34,6 @@ type (
 )
 
 var (
-	common_options *genericclioptions.ConfigFlags
 	options        Options
 )
 
@@ -47,8 +47,8 @@ func must(err error, msg string, v ...any) {
 
 // Set up command line options processing
 func init() {
-	common_options = genericclioptions.NewConfigFlags(false)
-	common_options.AddFlags(flag.CommandLine)
+	options.ConfigFlags = *genericclioptions.NewConfigFlags(false)
+	options.AddFlags(flag.CommandLine)
 
 	flag.StringVarP(&options.OutputFile, "output", "o", "", "File to which to write configuration")
 	flag.BoolVarP(&options.Help, "help", "h", false, "")
@@ -69,7 +69,7 @@ func requestToken(loader clientcmd.ClientConfig) (*authv1.TokenRequest, error) {
 		Spec: authv1.TokenRequestSpec{},
 	}
 
-	return clientset.CoreV1().ServiceAccounts(*common_options.Namespace).CreateToken(
+	return clientset.CoreV1().ServiceAccounts(*options.Namespace).CreateToken(
 		context.TODO(), options.ServiceAccountName, tokenRequest, metav1.CreateOptions{})
 }
 
@@ -109,12 +109,12 @@ func parseArgs() {
 func main() {
 	parseArgs()
 
-	loader := common_options.ToRawKubeConfigLoader()
+	loader := options.ToRawKubeConfigLoader()
 	config, err := loader.RawConfig()
 	must(err, "failed to get kubernetes configuration")
 
-	if *common_options.Context != "" {
-		config.CurrentContext = *common_options.Context
+	if *options.Context != "" {
+		config.CurrentContext = *options.Context
 	}
 
 	// Minify and flatten the configuration: this gets us a config that
@@ -125,8 +125,8 @@ func main() {
 
 	// Default to namespace of current context if not provided
 	// explicitly on command line.
-	if *common_options.Namespace == "" {
-		common_options.Namespace = &config.Contexts[config.CurrentContext].Namespace
+	if *options.Namespace == "" {
+		options.Namespace = &config.Contexts[config.CurrentContext].Namespace
 	}
 
 	tokenResponse, err := requestToken(loader)
@@ -140,12 +140,12 @@ func main() {
 // adds a new context, deletes the previous current context, and updates the current context
 // to point at the one we just added.
 func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.TokenRequest) {
-	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", *common_options.Namespace, options.ServiceAccountName)
+	qualName := fmt.Sprintf("system:serviceaccount:%s:%s", *options.Namespace, options.ServiceAccountName)
 
 	config.Contexts[qualName] = &clientcmdapi.Context{
 		Cluster:   config.Contexts[config.CurrentContext].Cluster,
 		AuthInfo:  qualName,
-		Namespace: *common_options.Namespace,
+		Namespace: *options.Namespace,
 	}
 	delete(config.Contexts, config.CurrentContext)
 	config.CurrentContext = qualName
