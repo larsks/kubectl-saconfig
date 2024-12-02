@@ -1,4 +1,4 @@
-PKG=kubectl-saconfig
+PKG=github.com/larsks/kubectl-saconfig
 EXE=kubectl-saconfig-$(shell go env GOOS)-$(shell go env GOARCH)
 
 GOSRC =  cmd/saconfig/main.go \

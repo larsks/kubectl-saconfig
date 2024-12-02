@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"kubectl-saconfig/version"
+	"github.com/larsks/kubectl-saconfig/version"
 	"log"
 	"os"
 

@@ -1,4 +1,4 @@
-module kubectl-saconfig
+module github.com/larsks/kubectl-saconfig
 
 go 1.22.0
 
