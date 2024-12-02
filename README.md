@@ -2,6 +2,20 @@
 
 This is a `kubectl` plugin that will generate a kubeconfig file for authenticating as a service account.
 
+## Installation
+
+To install into `/usr/local/bin`:
+
+```
+make install
+```
+
+To install into `~/bin`:
+
+```
+make install bindir=$HOME/bin
+```
+
 ## Usage
 
 ```

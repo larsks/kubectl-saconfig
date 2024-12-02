@@ -1,11 +1,11 @@
 PKG=github.com/larsks/kubectl-saconfig
-EXE=kubectl-saconfig-$(shell go env GOOS)-$(shell go env GOARCH)
+EXE=build/kubectl-saconfig-$(shell go env GOOS)-$(shell go env GOARCH)
 
-GOSRC =  cmd/saconfig/main.go \
-	 version/version.go
+# Generate a list of all the source files in our package
+GOSRC = $(shell go list -f '{{ $$dir := .Dir }}{{ range .GoFiles }}{{ $$dir }}/{{ . }}{{ end }}' ./...)
 
 VERSION = $(shell git describe --tags 2> /dev/null || echo unknown)
-COMMIT = $(shell git rev-parse --short=10 HEAD)
+COMMIT = $(shell git rev-parse --short=10 HEAD || echo unknown)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%S")
 
 GOLDFLAGS = \
@@ -14,19 +14,25 @@ GOLDFLAGS = \
 	    -X '$(PKG)/version.BuildRef=$(COMMIT)' \
 	    -X '$(PKG)/version.BuildDate=$(DATE)'
 
-all: build/$(EXE)
+prefix=/usr/local
+bindir=$(prefix)/bin
 
-build/$(EXE): build $(GOSRC)
+all: $(EXE)
+
+install: all
+	install -d -m 755 $(DESTDIR)$(bindir)
+	install -m 755 $(EXE) $(DESTDIR)$(bindir)/kubectl-saconfig
+
+$(EXE): $(dir $(EXE)) $(GOSRC)
 	go build -o $@ -ldflags "$(GOLDFLAGS)" ./cmd/saconfig/
 
-build:
-	mkdir build
+$(dir $(EXE)):
+	mkdir $@
 
 clean:
 	rm -rf build
 
-realclean: clean
-	rm -f krew/krew.yaml
+krew:
+	krew-release "$(VERSION)" krew/krew.yaml.tmpl
 
-krew/krew.yaml:
-	krew-release "$(VERSION)" krew/krew.yaml.tmpl -o $@
+.PHONY: clean realclean install all krew
