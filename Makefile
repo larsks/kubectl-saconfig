@@ -4,7 +4,7 @@ EXE=kubectl-saconfig-$(shell go env GOOS)-$(shell go env GOARCH)
 GOSRC =  cmd/saconfig/main.go \
 	 version/version.go
 
-VERSION = $(shell git describe --tags --exact-match 2> /dev/null || echo unknown)
+VERSION = $(shell git describe --tags 2> /dev/null || echo unknown)
 COMMIT = $(shell git rev-parse --short=10 HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%S")
 
