@@ -4,8 +4,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"github.com/larsks/kubectl-saconfig/version"
+	"io"
 	"log"
 	"os"
 
@@ -25,7 +25,7 @@ import (
 type (
 	// Holds values of command line options.
 	Options struct {
-    genericclioptions.ConfigFlags
+		genericclioptions.ConfigFlags
 		ServiceAccountName string // Target service account name
 		OutputFile         string // Output kubeconfig to this file when specified (default to stdout)
 		Help               bool   // --help was requested
@@ -34,7 +34,7 @@ type (
 )
 
 var (
-	options        Options
+	options Options
 )
 
 // If err is not nil, log a failure message and exit.
