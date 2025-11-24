@@ -10,9 +10,7 @@ DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%S")
 
 GOLDFLAGS = \
 	    -w -s \
-	    -X '$(PKG)/version.BuildVersion=$(VERSION)' \
-	    -X '$(PKG)/version.BuildRef=$(COMMIT)' \
-	    -X '$(PKG)/version.BuildDate=$(DATE)'
+	    -X '$(PKG)/version.Version=$(VERSION)' \
 
 prefix=/usr/local
 bindir=$(prefix)/bin

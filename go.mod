@@ -1,10 +1,9 @@
 module github.com/larsks/kubectl-saconfig
 
-go 1.24.0
-
-toolchain go1.24.5
+go 1.24.5
 
 require (
+	github.com/larsks/gobot v0.1.5
 	github.com/spf13/pflag v1.0.10
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2

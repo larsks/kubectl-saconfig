@@ -1,15 +1,25 @@
 package version
 
-import "fmt"
+import (
+	"fmt"
+	"runtime/debug"
+
+	"github.com/larsks/gobot/tools"
+)
 
 var (
-	BuildVersion = "development"
-	BuildRef     = ""
-	BuildDate    = ""
+	Version = "development"
 )
 
 func ShowVersion() {
-	fmt.Printf("Version: %s\n", BuildVersion)
-	fmt.Printf("Build ref: %s\n", BuildRef)
-	fmt.Printf("Build date: %s\n", BuildDate)
+	bi, ok := debug.ReadBuildInfo()
+	fmt.Printf("kubectl-saconfig version %s", Version)
+	if ok {
+		bimap := tools.BuildInfoMap(bi)
+		fmt.Printf(" %s/%s", bimap["GOOS"], bimap["GOARCH"])
+		if vcs, ok := bimap["vcs"]; ok && vcs == "git" {
+			fmt.Printf(" revision %s on %s", bimap["vcs.revision"][:10], bimap["vcs.time"])
+		}
+	}
+	fmt.Printf("\n")
 }
