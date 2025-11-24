@@ -60,10 +60,14 @@ func init() {
 // Request a token for the target service account
 func requestToken(loader clientcmd.ClientConfig) (*authv1.TokenRequest, error) {
 	restConfig, err := loader.ClientConfig()
-	must(err, "failed to extract client configuration")
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract client configuration: %w", err)
+	}
 
 	clientset, err := kubernetes.NewForConfig(restConfig)
-	must(err, "failed to create kubernetes client")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create kubernetes client: %w", err)
+	}
 
 	tokenRequest := &authv1.TokenRequest{
 		Spec: authv1.TokenRequestSpec{},
@@ -77,7 +81,7 @@ func requestToken(loader clientcmd.ClientConfig) (*authv1.TokenRequest, error) {
 // pflag 1.0.6 or any commit later than 81378bbcd8a.
 func usage() {
 	prg := os.Args[0]
-	fmt.Fprintf(flag.CommandLine.Output(), "%s: usage: %s [options] serviceAccountName\n\nOptions:\n\n", prg, prg)
+	fmt.Fprintf(flag.CommandLine.Output(), "%s: usage: %s [options] serviceAccountName\n\nOptions:\n\n", prg, prg) //nolint:errcheck
 	flag.CommandLine.PrintDefaults()
 }
 
@@ -133,7 +137,7 @@ func main() {
 	must(err, "failed to acquire token for serviceaccount %s", options.ServiceAccountName)
 	addServiceAccountToken(&config, tokenResponse)
 
-	writeConfig(&config)
+	must(writeConfig(&config), "failed to write client configuration")
 }
 
 // Add the service account token to the configuration. This adds a user users section,
@@ -159,20 +163,27 @@ func addServiceAccountToken(config *clientcmdapi.Config, tokenResponse *authv1.T
 
 // Write configuration to stdout (default) or to the file specified
 // in the --output option.
-func writeConfig(config *clientcmdapi.Config) {
+func writeConfig(config *clientcmdapi.Config) error {
 	var out io.WriteCloser
-	var err error
 
 	content, err := clientcmd.Write(*config)
-	must(err, "failed to marshal configuration")
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration: %w", err)
+	}
 
 	if options.OutputFile != "" {
 		out, err = os.Create(options.OutputFile)
-		must(err, "failed to open %s for writing", options.OutputFile)
-		defer out.Close()
+		if err != nil {
+			return fmt.Errorf("failed to open %s for writing: %w", options.OutputFile, err)
+		}
+		defer out.Close() //nolint:errcheck
 	} else {
 		out = os.Stdout
 	}
-	_, err = out.Write(content)
-	must(err, "failed to write configuration file")
+
+	if _, err = out.Write(content); err != nil {
+		return fmt.Errorf("failed to write configuration file: %w", err)
+	}
+
+	return nil
 }
