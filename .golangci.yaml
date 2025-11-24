@@ -1,19 +1,40 @@
-linters:
-  enable:
-  - errcheck
-  - gosimple
-  - govet
-  - ineffassign
-  - revive
-  - staticcheck
-  - unused
-  - gocritic
-  - importas
-  - misspell
-  - revive
+version: "2"
 
-linters-settings:
-  revive:
+run:
+  timeout: 10m
+
+formatters:
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/larsks/airdancer
+    gofmt:
+      simplify: true
+    gofumpt:
+      extra-rules: false
+
+linters:
+  exclusions:
     rules:
-      - name: var-naming
-        disabled: true
+      - path: '(.+)_test\.go'
+        linters:
+        - errcheck
+  settings:
+    misspell:
+      locale: US
+    nolintlint:
+      allow-unused: false
+      require-specific: true
+    revive:
+      confidence: 0.1
+  enable:
+    - bodyclose
+    - errcheck
+    - ineffassign
+    - misspell
+    - nolintlint
+    - revive
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
